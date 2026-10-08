@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hypothesis testing • Teaching demo</title>
+  <meta name="author" content="Chanh Bao Lam">
+  <meta name="description" content="An interactive hypothesis testing demo by Chanh Bao Lam. Explore z and t tests, p-values, significance levels, and sampling distributions on original and standardized scales.">
+  <meta name="keywords" content="hypothesis testing, statistics, z test, t test, p-value, significance level, sampling distribution, EDCI 913, Chanh Bao Lam">
+  <meta name="theme-color" content="#512888">
+  <meta property="og:title" content="Hypothesis testing • Teaching demo">
+  <meta property="og:description" content="Explore z and t tests, p-values, and rejection regions with an interactive teaching demo by Chanh Bao Lam.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Chanh Bao Lam • Teaching demos">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">STATISTICS / INTERACTIVE DEMO</p><h1>Hypothesis testing</h1></div>
+    <button id="reset" class="quiet">Reset</button>
+  </header>
+  <main>
+    <aside aria-label="Distribution controls">
+      <section>
+        <h2>Distribution</h2>
+        <fieldset class="segmented"><legend class="sr-only">Sampling distribution</legend>
+          <label><input type="radio" name="distribution" value="z" checked><span>Normal (z)</span></label>
+          <label><input type="radio" name="distribution" value="t"><span>Student’s t</span></label>
+        </fieldset>
+        <label class="field">Sample size (n) <input id="n" type="number" min="2" max="10001" step="1" value="25" required></label>
+        <label class="field">Mean under H₀ <input id="mean" type="number" step="any" value="100" required></label>
+        <label class="field"><span id="sd-label">Standard deviation under H₀</span> <input id="sd" type="number" min="0.000001" step="any" value="15" required></label>
+        <label class="field">Observed statistic (original scale)<input id="observed" type="number" step="any" value="107" required></label>
+        <p class="hint">Standard error = SD / √n = <output id="se">3</output><br>Degrees of freedom = n − 1 = <output id="df">24</output></p>
+        <p id="sd-note" class="hint">For z, use the known population SD. For t, use the sample SD to estimate it.</p>
+        <div style="height: 0.5rem;"></div>
+        <h2>Select scale</h2>
+        <fieldset class="segmented"><legend class="sr-only">Scale</legend>
+          <label><input type="radio" name="scale" value="standard" checked><span>Standardized</span></label>
+          <label><input type="radio" name="scale" value="original"><span>Original scale</span></label>
+        </fieldset>
+      </section>
+      <section>
+        <h2>Test direction</h2>
+        <fieldset class="choices"><legend class="sr-only">Test direction</legend>
+          <label><input type="radio" name="tail" value="two" checked> Two-tailed</label>
+          <label><input type="radio" name="tail" value="right"> Right-tailed</label>
+          <label><input type="radio" name="tail" value="left"> Left-tailed</label>
+        </fieldset>
+      </section>
+      <section>
+        <h2>Significance level <i>α</i></h2>
+        <fieldset class="segmented alpha"><legend class="sr-only">Significance level</legend>
+          <label><input type="radio" name="alpha" value="0.10"><span>0.10</span></label>
+          <label><input type="radio" name="alpha" value="0.05" checked><span>0.05</span></label>
+          <label><input type="radio" name="alpha" value="0.01"><span>0.01</span></label>
+        </fieldset>
+        <p class="hint">Red marks the rejection region. Its total area is α.</p>
+      </section>
+      <section class="p-control">
+        <div class="label-row"><label for="p-slider"><i>p</i>-value</label><output id="p-output" for="p-slider">0.05</output></div>
+        <input id="p-slider" type="range" min="0" max="1" step="0.01" value="0.05">
+        <div class="range-labels"><span>0</span><span>1</span></div>
+        <p class="hint">Type an observed value, slide in steps of 0.01, or drag the statistic. Typed values keep their calculated p-value; the slider shows the nearest 0.01.</p>
+      </section>
+    </aside>
+    <article>
+      <div class="chart-heading"><div><h2 id="chart-title">Standard normal distribution</h2><p id="chart-subtitle">Assuming H₀ is true</p></div><span class="live-tag">EXPLORE</span></div>
+      <div class="legend" aria-label="Chart legend"><span><b class="swatch rejection"></b>Rejection region (α)</span><span><b class="swatch probability"></b>Tail area from statistic (p)</span></div>
+      <div class="plot-wrap">
+        <svg id="plot" viewBox="0 0 1000 530" role="img" aria-labelledby="plot-title plot-desc">
+          <title id="plot-title">Sampling distribution under the null hypothesis</title><desc id="plot-desc">Red rejection regions and purple p-value tail areas.</desc>
+        </svg>
+      </div>
+      <p id="endpoint-note" class="endpoint" hidden></p>
+      <div class="results" aria-live="polite" aria-atomic="true">
+        <div><span id="stat-label" class="result-label">Observed z</span><strong id="stat-value">1.960</strong><small id="original-value"></small></div>
+        <div><span class="result-label">Critical values</span><strong id="critical-values">−1.960, 1.960</strong><small id="critical-original"></small></div>
+        <div id="decision-box"><span class="result-label" id="comparison">p = α</span><strong id="decision">Fail to reject H₀</strong><small id="decision-note"></small></div>
+      </div>
+      <p class="explanation" id="explanation"></p>
+      <details><summary>What am I moving?</summary><p>The observed input is the sample mean in original units, in either view. The p-value slider finds the statistic with the selected tail area. Typing an observed value calculates its p-value without rounding to the slider steps. Dragging snaps p to steps of 0.01. For a two-tailed test, both tails count.</p><p>The red region is set by α. Changing α changes the decision threshold, not the observed p-value. This demo uses p &lt; α to reject H₀ and p ≥ α to fail to reject H₀.</p><p>SE = SD / √n and DF = n − 1 are calculated automatically. Changing sample size, null mean, or SD keeps the original observed value fixed. Switching views shows the same test on a different scale.</p><p>For Student’s t, use the sample SD. The original-scale curve illustrates mean + t × SE. </p></details>
+    </article>
+  </main>
+  <footer style="justify-content: center; text-align: center;"><span>© 2026 <a href="https://cblam202.github.io/home">Chanh Bao Lam</a></span></footer>
+</body>
+</html>
