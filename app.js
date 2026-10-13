@@ -26,19 +26,48 @@ const Stats = (() => {
     }
     return h;
   }
+  // Evaluate log Γ(a + 1/2) − log Γ(a) without subtracting two large logarithms.
+  function halfGammaRatio(a) {
+    let first=.99999999999980993,second=first;
+    co.forEach((c,i)=>{first+=c/(a+i);second+=c/(a+i+.5);});
+    const t=a+6.5;
+    return .5*Math.log(t)+a*Math.log1p(.5/t)-.5+Math.log(second/first);
+  }
   function beta(x,a,b) {
     if (x<=0) return 0;
     if (x>=1) return 1;
-    const factor=Math.exp(lg(a+b)-lg(a)-lg(b)+a*Math.log(x)+b*Math.log1p(-x));
+    const normalization=a===.5?halfGammaRatio(b)-.5*Math.log(Math.PI)
+      : b===.5?halfGammaRatio(a)-.5*Math.log(Math.PI):lg(a+b)-lg(a)-lg(b);
+    const factor=Math.exp(normalization+a*Math.log(x)+b*Math.log1p(-x));
     return x<(a+1)/(a+b+2) ? factor*fraction(a,b,x)/a
       : 1-factor*fraction(b,a,1-x)/b;
   }
-  // Complementary error function, maximum error approximately 1e-7.
+  // Complementary error function via the regularized gamma function at a = 1/2.
+  // Use a series near zero and a continued fraction in the tail to avoid cancellation.
   function erfc(x) {
-    const z=Math.abs(x), t=1/(1+.5*z);
-    const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196
-      +t*(.09678418+t*(-.18628806+t*(.27886807+t*(-1.13520398
-      +t*(1.48851587+t*(-.82215223+t*.17087277)))))))));
+    const z=x*x;
+    if (z===0) return 1;
+    if (!Number.isFinite(z)) return x<0?2:0;
+    const factor=Math.exp(-z+.5*Math.log(z)-.5*Math.log(Math.PI));
+    let r;
+    if (z<1.5) {
+      let term=2,sum=term;
+      for (let n=1;n<200;n++) {
+        term*=z/(n+.5);sum+=term;
+        if (Math.abs(term)<Math.abs(sum)*2e-16) break;
+      }
+      r=1-factor*sum;
+    } else {
+      let b=z+.5,c=1e300,d=1/b,h=d;
+      for (let n=1;n<200;n++) {
+        const a=-n*(n-.5);b+=2;
+        d=a*d+b;if(Math.abs(d)<1e-300)d=1e-300;
+        c=b+a/c;if(Math.abs(c)<1e-300)c=1e-300;
+        d=1/d;const delta=d*c;h*=delta;
+        if (Math.abs(delta-1)<2e-15) break;
+      }
+      r=factor*h;
+    }
     return x>=0 ? r : 2-r;
   }
   function cdf(x,kind="z",df=24) {
@@ -46,27 +75,31 @@ const Stats = (() => {
     if (x===-Infinity) return 0;
     if (x===0) return .5;
     if (kind==="z") return .5*erfc(-x/Math.SQRT2);
+    if (x*x<1) {
+      const center=.5*beta(x*x/(df+x*x),.5,df/2);
+      return x<0?.5-center:.5+center;
+    }
     const tail=.5*beta(df/(df+x*x),df/2,.5);
     return x<0 ? tail : 1-tail;
   }
   function pdf(x,kind="z",df=24) {
     if (!Number.isFinite(x)) return 0;
     if (kind==="z") return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
-    return Math.exp(lg((df+1)/2)-lg(df/2)-.5*Math.log(df*Math.PI)
+    return Math.exp(halfGammaRatio(df/2)-.5*Math.log(df*Math.PI)
       -(df+1)/2*Math.log1p(x*x/df));
   }
   function quantile(p,kind="z",df=24) {
     if (p<=0) return -Infinity;
     if (p>=1) return Infinity;
     if (p===.5) return 0;
-    if (p<.5) return -quantile(1-p,kind,df);
+    const tail=Math.min(p,1-p);
     let lo=0,hi=1;
-    while (cdf(hi,kind,df)<p && hi<1e12) hi*=2;
+    while (cdf(-hi,kind,df)>tail && hi<Number.MAX_VALUE/2) hi*=2;
     for (let i=0;i<75;i++) {
       const mid=(lo+hi)/2;
-      if (cdf(mid,kind,df)<p) lo=mid; else hi=mid;
+      if (cdf(-mid,kind,df)>tail) lo=mid; else hi=mid;
     }
-    return (lo+hi)/2;
+    return (p<.5?-1:1)*(lo+hi)/2;
   }
   function pValue(x,tail,kind,df) {
     if (tail==="two") return Math.min(1,2*cdf(-Math.abs(x),kind,df));
@@ -78,9 +111,9 @@ if (typeof module!=="undefined") module.exports=Stats;
 
 // 2. State and display. Keep an entered statistic exact rather than snapping
 // it to the slider. SE is a scale factor for the original t curve.
-if (typeof document!=="undefined") {
+if (typeof document!=="undefined" && document.getElementById("observed")) {
   const $=id=>document.getElementById(id);
-  const state={kind:"z",scale:"standard",tail:"two",alpha:.05,p:Stats.pValue(7/3,"two","z",24),df:24,mean:100,sd:15,se:3,sign:1,n:25,observed:7/3};
+  const state={kind:"z",scale:"standard",tail:"two",alpha:.05,p:Stats.pValue(7/3,"two","z",24),df:24,mean:100,sd:15,se:3,sign:1,n:25,showCI:false,observed:7/3};
   const defaults={...state}, plot=$("plot");
   const g={left:65,right:950,top:60,base:355};
   let domain=4.4,dragDomain=null,dragging=false;
@@ -91,6 +124,7 @@ if (typeof document!=="undefined") {
   const symbol=()=>state.kind;
   function probability(p) {
     if (p>0 && p<.0001) return p.toExponential(2);
+    if (p!==state.alpha && Number(p.toFixed(4))===state.alpha) return TTestView.probability(p,state.alpha);
     return Math.abs(p*100-Math.round(p*100))<1e-9 ? p.toFixed(2) : p.toFixed(4);
   }
   function setObserved(z) {
@@ -125,7 +159,12 @@ if (typeof document!=="undefined") {
     return "<"+name+" "+Object.entries(attrs).map(([k,v])=>k+'="'+v+'"').join(" ")+">"+content+"</"+name+">";
   }
   function draw(stat,crit) {
-    domain=dragDomain ?? Math.max(4.4,...crit.map(x=>Math.abs(x)*1.25),Number.isFinite(stat)?Math.abs(stat)*1.18:0);
+    const showCI=state.showCI && Number.isFinite(stat);
+    const bounds=TTestView.interval(stat,1,state.kind,state.df,state.tail,state.alpha);
+    domain=Math.max(dragDomain ?? 4.4,...crit.map(x=>Math.abs(x)*1.25),Number.isFinite(stat)?Math.abs(stat)*1.18:0,Number.isFinite(stat)?Math.max(...bounds.filter(Number.isFinite).map(Math.abs))*1.12:0);
+    $("toggle-ci").textContent=state.showCI?"Hide":"Show";
+    $("toggle-ci").setAttribute("aria-pressed",String(state.showCI));
+    $("toggle-ci").setAttribute("aria-label",(state.showCI?"Hide":"Show")+" confidence interval on the plot");
     const px=x=>g.left+(x+domain)/(2*domain)*(g.right-g.left);
     const py=x=>g.base-pdf(x)/pdf(0)*(g.base-g.top);
     const text=(x,y,s,cls="")=>tag("text",{x,y,"text-anchor":"middle",class:cls},s);
@@ -147,7 +186,7 @@ if (typeof document!=="undefined") {
     bands(state.alpha).forEach(([a,b])=>{
       svg+=tag("path",{d:path(a,b,true),fill:"#efb8bc","fill-opacity":.85});
       a=Math.max(a,-domain);b=Math.min(b,domain);
-      if (b>a) svg+=tag("rect",{x:px(a),y:g.base+5,width:px(b)-px(a),height:5,fill:"#c44248"});
+      if (b>a) svg+=tag("rect",{x:px(a),y:g.base+5,width:px(b)-px(a),height:2,fill:"#c44248"});
     });
     bands(state.p,stat).forEach(([a,b])=>{
       svg+=tag("path",{d:path(a,b,true),fill:"#512888","fill-opacity":.48});
@@ -157,8 +196,7 @@ if (typeof document!=="undefined") {
     svg+=line(g.left,g.base,g.right,g.base,"#8b98ab");
     const step=domain>30?20:domain>12?5:domain>6?2:1;
     const every=Math.ceil((2*domain/step)/10);
-    for (let i=Math.ceil(-domain/step);i<=Math.floor(domain/step);i++) {
-      if (i%every!==0) continue;
+    for (let i=Math.ceil(-domain/step/every)*every;i<=Math.floor(domain/step);i+=every) {
       const x=i*step;
       svg+=line(px(x),g.base,px(x),g.base+14,"#8b98ab");
       svg+=text(px(x),g.base+38,fmt(axis(x),state.scale==="original"?2:0));
@@ -175,40 +213,60 @@ if (typeof document!=="undefined") {
     svg+=tag("circle",{id:"stat-handle",class:"handle",cx:x,cy:g.base,r:11,fill:"#001641",
       stroke:"white","stroke-width":3,tabindex:0,role:"button","aria-label":"Observed statistic. Use left and right arrows to move it."});
     svg+=text((g.left+g.right)/2,g.base+108,state.scale==="original"?"Original scale":"Standardized statistic ("+symbol()+")");
-    svg+=text((g.left+g.right)/2,505,"Drag the navy marker • Purple areas together = "+probability(state.p));
+    if (showCI) {
+      const y=g.base+19;
+      svg+=tag("g",{class:"ci-overlay",role:"img","aria-label":Math.round(100*(1-state.alpha))+"% confidence interval: "+bounds.map(value=>fmt(axis(value))).join(" to ")},
+        line(px(Math.max(-domain,bounds[0])),y,px(Math.min(domain,bounds[1])),y,"#176b57")
+        +bounds.map(value=>{
+          if (Number.isFinite(value)) return line(px(value),y-5,px(value),y+5,"#176b57");
+          const edge=value<0?g.left:g.right,inward=value<0?7:-7;
+          return line(edge+inward,y-5,edge,y,"#176b57")+line(edge+inward,y+5,edge,y,"#176b57");
+        }).join(""));
+    }
     plot.innerHTML=svg;
   }
   function render(keepObservedInput=false) {
     const stat=statistic(),crit=criticals();
-    const reject=state.p<state.alpha-1e-10, boundary=Math.abs(state.p-state.alpha)<1e-10;
-    $("se").textContent=fmt(state.se);
-    $("df").textContent=state.df;
-    $("sd-label").textContent=state.kind==="t"?"Standard deviation (sample estimate)":"Standard deviation under H₀";
+    const reject=state.p<state.alpha, boundary=state.p===state.alpha;
+    $("sd-label").textContent=state.kind==="t"?"Standard deviation (sample estimate)":"Standard deviation (known population)";
     $("p-slider").value=Math.round(state.p*100)/100;
     $("p-output").textContent=probability(state.p);
     if (!keepObservedInput) {
-      $("observed").value=Number.isFinite(stat)?Number(original(stat).toPrecision(7)):"";
+      $("observed").value=Number.isFinite(stat)?String(original(stat)):"";
+      $("observed").defaultValue=$("observed").value;
       $("observed").placeholder=Number.isFinite(stat)?"":fmt(stat);
     }
     $("chart-title").textContent=state.kind==="z"
       ? (state.scale==="standard"?"Standard normal distribution":"Normal sampling distribution")
       : (state.scale==="standard"?"Student’s t distribution":"Student’s t on the original scale");
-    $("chart-subtitle").textContent="Assuming H₀ is true · n = "+state.n+(state.kind==="t"?" · DF = "+state.df:"")
-      +(state.scale==="original"?" · Mean = "+state.mean+" · SE = "+fmt(state.se):"");
-    $("stat-label").textContent="Observed "+symbol();$("stat-value").textContent=fmt(stat);
-    $("original-value").textContent="Original value: "+fmt(original(stat));
-    $("critical-values").textContent=crit.map(x=>fmt(x)).join(", ");
-    $("critical-original").textContent=state.scale==="original"?"Original scale: "+crit.map(x=>fmt(original(x))).join(", "):symbol()+" scale";
-    $("comparison").textContent="p = "+probability(state.p)+" "+(boundary?"=":reject?"<":">")+" α = "+state.alpha.toFixed(2);
+    $("chart-subtitle").textContent="Assuming H₀ is true"+(state.kind==="t"?" · DF = "+state.df:"");
+    const originalScale=state.scale==="original";
+    $("stat-label").textContent="Observed value";
+    $("stat-value").innerHTML=(originalScale?"x&#x0305;":symbol())+" = "+fmt(axis(stat));
+    // Standardization divides the mean's SE by itself; this is not the SD of a t distribution.
+    $("result-se").textContent=fmt(originalScale?state.se:1);
+    $("result-se").title=originalScale?"Standard error of the sample mean":"One standard error in standardized units";
+    $("result-p").textContent=probability(state.p);
+    $("critical-label").textContent=crit.length===1?"Critical value":"Critical values";
+    $("critical-values").textContent=crit.map(x=>fmt(axis(x))).join(", ");
+    $("critical-original").textContent=state.scale==="original"?"Original scale":symbol()+" scale";
+    $("comparison").textContent=(boundary?"=":reject?"<":">")+" α = "+state.alpha.toFixed(2);
     $("decision").textContent=reject?"Reject H₀":"Fail to reject H₀";
     $("decision-box").classList.toggle("reject",reject);
     $("decision-note").textContent=boundary?"At the boundary: this demo uses p < α.":reject?"Statistically significant":"Not statistically significant";
-    $("explanation").textContent=state.tail==="two"
-      ? "Purple includes both tails beyond ±"+fmt(Math.abs(stat))+" on the "+symbol()+" scale. Each tail contains "+probability(state.p/2)+". Red marks the rejection regions, with "+(state.alpha/2).toFixed(3)+" in each tail."
-      : "Purple is the area to the "+state.tail+" of the observed statistic. Red marks the "+state.tail+" rejection region, with total area "+state.alpha.toFixed(2)+".";
     $("endpoint-note").hidden=Number.isFinite(stat);
-    $("endpoint-note").textContent="This endpoint requires an infinite statistic. The marker is shown at the chart edge; it is not a finite cutoff.";
+    $("endpoint-note").textContent="Infinite statistic; marker shown at the chart edge.";
     draw(stat,crit);
+    $("method-z").hidden=state.kind!=="z";
+    $("method-t").hidden=state.kind!=="t";
+    $("interval-label").textContent=Math.round(100*(1-state.alpha))+"% confidence interval";
+    $("interval-label").title=originalScale?(state.tail==="two"?"Two-sided":"One-sided")+" confidence interval for the population mean":"Population mean confidence interval expressed as (μ − μ₀) / SE";
+    if (Number.isFinite(stat)) {
+      const bounds=TTestView.interval(stat,1,state.kind,state.df,state.tail,state.alpha);
+      $("mean-interval").textContent=TTestView.intervalText(bounds.map(axis));
+    } else {
+      $("mean-interval").textContent="—";
+    }
   }
 
   // 3. Form input and dragging. Invalid entries retain the last valid plot.
@@ -223,6 +281,9 @@ if (typeof document!=="undefined") {
   });
   ["mean","sd","n"].forEach(id=>$(id).addEventListener("input",()=>{
     const value=Number($(id).value);
+    // Anchor native 1-unit spinner steps at the entered value without rejecting other decimals.
+    if (id!=="n") $(id).defaultValue=$(id).value;
+    if (id==="sd") $(id).setCustomValidity(value>0?"":"Enter a standard deviation greater than zero.");
     if (!$(id).checkValidity() || !Number.isFinite(value)) return;
     const z=statistic(),raw=original(z);
     state[id]=value;
@@ -233,14 +294,17 @@ if (typeof document!=="undefined") {
   }));
   $("observed").addEventListener("input",()=>{
     const value=Number($("observed").value);
+    $("observed").defaultValue=$("observed").value;
     if(!$("observed").checkValidity() || !Number.isFinite(value))return;
     setObserved((value-state.mean)/state.se);
     render(true);
   });
   $("p-slider").addEventListener("input",e=>{state.observed=null;state.p=Number(e.target.value);render();});
+  $("toggle-ci").addEventListener("click",()=>{state.showCI=!state.showCI;render();});
   $("reset").addEventListener("click",()=>{
     Object.assign(state,defaults);
-    ["mean","sd","n"].forEach(id=>{$(id).value=state[id];});
+    $("sd").setCustomValidity("");
+    ["mean","sd","n"].forEach(id=>{$(id).value=state[id];$(id).defaultValue=$(id).value;});
     const mapping={distribution:"kind",scale:"scale",tail:"tail",alpha:"alpha"};
     document.querySelectorAll('input[type="radio"]').forEach(input=>{
       input.checked=input.name==="alpha"?Number(input.value)===state.alpha:input.value===state[mapping[input.name]];

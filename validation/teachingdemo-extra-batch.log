@@ -1,0 +1,132 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      Stata 19.0
+___/   /   /___/   /   /___/       MP—Parallel Edition
+
+ Statistics and Data Science       Copyright 1985-2025 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-782-8272        https://www.stata.com
+                                   979-696-4600        service@stata.com
+
+Stata license: Single-user 4-core  perpetual
+Serial number: 501906220380
+  Licensed to: Chanh Bao Lam
+               Kansas State University
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+      3. More than 2 billion observations are allowed; see help obs_advice.
+      4. Maximum number of variables is set to 5,000 but can be increased;
+          see help set_maxvar.
+
+. do /private/tmp/teachingdemo-extra.do 
+
+. clear all
+
+. set more off
+
+. capture log close
+
+. log using "validation/stata-rcads.log", text replace
+(file /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.log
+    not found)
+-------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.
+> log
+  log type:  text
+ opened on:   9 Oct 2026, 23:51:18
+
+. * 1. Full precision course data, read only.
+. import excel "/Users/cblam/Library/CloudStorage/OneDrive-KansasStateUniversit
+> y/COE Teaching/EDCI 913 Inquiry I/3-Fall 2026/Stata/Groupwork data/Group work
+>  3 - p7 RCADS.xlsx", cellrange(B2:C137) firstrow clear
+(2 vars, 135 obs)
+
+. ttest September == December
+
+Paired t test
+------------------------------------------------------------------------------
+Variable |     Obs        Mean    Std. err.   Std. dev.   [95% conf. interval]
+---------+--------------------------------------------------------------------
+Septem~r |     135    49.46726    .8357547    9.710592    47.81428    51.12024
+December |     135     48.0655     1.22664    14.25226    45.63942    50.49158
+---------+--------------------------------------------------------------------
+    diff |     135    1.401761    .7655743     8.89517   -.1124115    2.915934
+------------------------------------------------------------------------------
+     mean(diff) = mean(September - December)                      t =   1.8310
+ H0: mean(diff) = 0                              Degrees of freedom =      134
+
+ Ha: mean(diff) < 0           Ha: mean(diff) != 0           Ha: mean(diff) > 0
+ Pr(T < t) = 0.9653         Pr(|T| > |t|) = 0.0693          Pr(T > t) = 0.0347
+
+. return list
+
+scalars:
+            r(ub_diff) =  2.915933770416189
+            r(lb_diff) =  -.1124115481939665
+            r(sd_diff) =  8.895170065602152
+            r(mu_diff) =  1.401761111111107
+               r(ub_2) =  50.49157804590084
+               r(lb_2) =  45.63941943558065
+               r(se_2) =  1.226639553681666
+               r(ub_1) =  51.12023693009748
+               r(lb_1) =  47.81428277360622
+               r(se_1) =  .8357546520398871
+              r(level) =  95
+               r(sd_2) =  14.25226368962517
+               r(sd_1) =  9.710591546597572
+                 r(se) =  .765574345016886
+                r(p_u) =  .034661544872609
+                r(p_l) =  .965338455127391
+                  r(p) =  .0693230897452179
+                  r(t) =  1.830992796761225
+               r(df_t) =  134
+               r(mu_2) =  48.06549874074074
+                r(N_2) =  135
+               r(mu_1) =  49.46725985185185
+                r(N_1) =  135
+
+. * 2. Verify the known-population-SD z-test command and returned values.
+. ztesti 25 107 15 100
+
+One-sample z test
+------------------------------------------------------------------------------
+         |     Obs        Mean    Std. err.   Std. dev.   [95% conf. interval]
+---------+--------------------------------------------------------------------
+       x |      25         107           3          15    101.1201    112.8799
+------------------------------------------------------------------------------
+    mean = mean(x)                                                z =   2.3333
+H0: mean = 100                                   
+
+   Ha: mean < 100               Ha: mean != 100               Ha: mean > 100
+ Pr(Z < z) = 0.9902         Pr(|Z| > |z|) = 0.0196          Pr(Z > z) = 0.0098
+
+. return list
+
+scalars:
+                  r(N) =  25
+                 r(mu) =  107
+                 r(sd) =  15
+                 r(se) =  3
+                 r(ub) =  112.8798919536202
+                 r(lb) =  101.1201080463798
+                  r(z) =  2.333333333333333
+                r(p_l) =  .9901846713713547
+                  r(p) =  .0196306572572906
+                r(p_u) =  .0098153286286453
+              r(level) =  95
+
+. log close
+      name:  <unnamed>
+       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.
+> log
+  log type:  text
+ closed on:   9 Oct 2026, 23:51:18
+-------------------------------------------------------------------------------
+
+. 
+end of do-file

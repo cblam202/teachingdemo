@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>One-sample tests • Teaching demo</title>
+  <meta name="author" content="Chanh Bao Lam">
+  <meta name="description" content="An interactive hypothesis testing demo by Chanh Bao Lam. Explore z and t tests, p-values, significance levels, and sampling distributions on original and standardized scales.">
+  <meta name="keywords" content="hypothesis testing, statistics, z test, t test, p-value, significance level, sampling distribution, EDCI 913, Chanh Bao Lam">
+  <meta name="theme-color" content="#512888">
+  <meta property="og:title" content="One-sample tests • Teaching demo">
+  <meta property="og:description" content="Explore z and t tests, p-values, and rejection regions with an interactive teaching demo by Chanh Bao Lam.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Chanh Bao Lam • Teaching demos">
+  <link rel="stylesheet" href="katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="ttests.js"></script>
+  <script defer src="ttest-view.js"></script>
+  <script defer src="app.js"></script>
+  <script defer src="katex/katex.min.js"></script>
+  <script defer src="math.js"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">EDCI 913 STATISTICAL ANALYSIS IN C&I </p><h1>One-sample tests</h1></div>
+    <div class="header-actions"><a class="quiet" href="index.html">Teaching demos</a><button id="reset" class="quiet">Reset</button></div>
+  </header>
+  <main>
+    <aside aria-label="Distribution controls">
+      <section>
+        <h2>Distribution</h2>
+        <fieldset class="segmented"><legend class="sr-only">Sampling distribution</legend>
+          <label><input type="radio" name="distribution" value="z" checked><span>Normal (z)</span></label>
+          <label><input type="radio" name="distribution" value="t"><span>Student’s t</span></label>
+        </fieldset>
+        <label class="field">Sample size (n) <input id="n" type="number" min="2" max="10001" step="1" value="25" required></label>
+        <label class="field">Mean under H₀ <input id="mean" type="number" step="1" value="100" required></label>
+        <label class="field"><span id="sd-label">Standard deviation (known population)</span> <input id="sd" type="number" step="1" value="15" required></label>
+        <label class="field">Sample mean (original scale)<input id="observed" type="number" step="1" value="107" required></label>
+        <h2>Select scale</h2>
+        <fieldset class="segmented"><legend class="sr-only">Scale</legend>
+          <label><input type="radio" name="scale" value="standard" checked><span>Standardized</span></label>
+          <label><input type="radio" name="scale" value="original"><span>Original scale</span></label>
+        </fieldset>
+      </section>
+      <section>
+        <h2>Test direction</h2>
+        <fieldset class="choices"><legend class="sr-only">Test direction</legend>
+          <label><input type="radio" name="tail" value="two" checked> Two-tailed</label>
+          <label><input type="radio" name="tail" value="right"> Right-tailed</label>
+          <label><input type="radio" name="tail" value="left"> Left-tailed</label>
+        </fieldset>
+      </section>
+      <section>
+        <h2>Significance level <i>α</i></h2>
+        <fieldset class="segmented alpha"><legend class="sr-only">Significance level</legend>
+          <label><input type="radio" name="alpha" value="0.10"><span>0.10</span></label>
+          <label><input type="radio" name="alpha" value="0.05" checked><span>0.05</span></label>
+          <label><input type="radio" name="alpha" value="0.01"><span>0.01</span></label>
+        </fieldset>
+      </section>
+      <section class="p-control">
+        <div class="label-row"><label for="p-slider"><i>p</i>-value</label><output id="p-output" for="p-slider">0.05</output></div>
+        <input id="p-slider" type="range" min="0" max="1" step="0.01" value="0.05">
+        <div class="range-labels"><span>0</span><span>1</span></div>
+        <p class="hint">Drag the marker or slider in steps of 0.01. Typed sample means retain full precision.</p>
+      </section>
+    </aside>
+    <article>
+      <div class="chart-heading"><div><h2 id="chart-title">Standard normal distribution</h2><p id="chart-subtitle">Assuming H₀ is true</p></div></div>
+      <div class="legend" aria-label="Chart legend"><span><b class="swatch rejection"></b>Rejection region (α)</span><span><b class="swatch probability"></b>p-value</span></div>
+      <div class="plot-wrap">
+        <svg id="plot" viewBox="0 0 1000 490" role="img" aria-labelledby="plot-title plot-desc">
+          <title id="plot-title">Sampling distribution under the null hypothesis</title><desc id="plot-desc">Red rejection regions and purple p-value tail areas.</desc>
+        </svg>
+      </div>
+      <p id="endpoint-note" class="endpoint" hidden></p>
+      <div class="results results-grid" aria-live="polite" aria-atomic="true">
+        <div><span id="stat-label" class="result-label">Observed value</span><strong id="stat-value"></strong></div>
+        <div><span class="result-label">Standard error</span><strong id="result-se"></strong></div>
+        <div><div class="interval-heading"><span id="interval-label" class="result-label" title="Two-sided confidence interval for the population mean">95% confidence interval</span><button id="toggle-ci" class="quiet ci-toggle" type="button" aria-pressed="false" aria-controls="plot" aria-label="Show confidence interval on the plot">Show</button></div><strong id="mean-interval"></strong></div>
+        <div><span id="critical-label" class="result-label">Critical values</span><strong id="critical-values"></strong><small id="critical-original"></small></div>
+        <div><span class="result-label">p-value</span><strong id="result-p"></strong><small id="comparison"></small></div>
+        <div id="decision-box"><span class="result-label">Decision</span><strong id="decision"></strong><small id="decision-note"></small></div>
+      </div>
+      <details class="methodology"><summary>Methodology</summary><div id="method-z"><h3>One-sample z-test</h3><p>σ is the known population SD; μ₀ is the hypothesized mean.</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>SE</mi><mo>=</mo><mfrac><mrow><mi>σ</mi></mrow><mrow><msqrt><mi>n</mi></msqrt></mrow></mfrac></mrow><annotation encoding="application/x-tex">SE=\frac{\sigma}{\sqrt{n}}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>z</mi><mo>=</mo><mfrac><mrow><mover><mi>x</mi><mo>¯</mo></mover><mo>−</mo><msub><mi>μ</mi><mrow><mn>0</mn></mrow></msub></mrow><mrow><mi>SE</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">z=\frac{\bar{x}-\mu_0}{SE}</annotation></semantics></math></div></div><div id="method-t"><h3>One-sample t-test</h3><p>s is the sample SD; μ₀ is the hypothesized mean.</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>SE</mi><mo>=</mo><mfrac><mrow><mi>s</mi></mrow><mrow><msqrt><mi>n</mi></msqrt></mrow></mfrac></mrow><annotation encoding="application/x-tex">SE=\frac{s}{\sqrt{n}}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo>=</mo><mfrac><mrow><mover><mi>x</mi><mo>¯</mo></mover><mo>−</mo><msub><mi>μ</mi><mrow><mn>0</mn></mrow></msub></mrow><mrow><mi>SE</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">t=\frac{\bar{x}-\mu_0}{SE}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>df</mi><mo>=</mo><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">df=n-1</annotation></semantics></math></div></div><h3>Confidence interval</h3><p>Confidence level is 100(1 − α)%. For two-tailed tests, q is the 1 − α/2 quantile and the interval is shown below. For right-tailed tests, q is the 1 − α quantile and the interval extends from the lower bound to ∞. For left-tailed tests, it extends from −∞ to the upper bound.</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>[</mo><mover><mi>x</mi><mo>¯</mo></mover><mo>−</mo><mi>q</mi><mi>SE</mi><mo>,</mo><mover><mi>x</mi><mo>¯</mo></mover><mo>+</mo><mi>q</mi><mi>SE</mi><mo>]</mo></mrow><annotation encoding="application/x-tex">[\bar{x}-qSE,\;\bar{x}+qSE]</annotation></semantics></math></div><h3>p-value and critical values</h3><p>The p-value is the area beyond the observed statistic in the selected tail, or both tails for a two-tailed test. Critical values leave α in the selected tail, or α/2 in each tail. Reject H₀ when p-value &lt; α.</p></details>
+      <details class="references"><summary>About and references</summary>
+        <p>This demonstration was developed by Chanh Lam with assistance from OpenAI Codex for instructional use in EDCI 913: Statistical Analysis in Curriculum and Instruction at Kansas State University. The calculation methods and example data follow Stata 19’s reference manual (StataCorp, 2025). Unequal variance calculations use Satterthwaite’s (1946) and Welch’s (1947) methods, as implemented in Stata. Equations are typeset using KaTeX (Khan Academy and other contributors, 2026) under the <a href="katex/LICENSE.txt">MIT License</a>.</p>
+        <div class="reference-list">
+          <p>Khan Academy and other contributors. (2026). <i>KaTeX</i> (Version 0.19.0) [Computer software]. <a href="https://github.com/KaTeX/KaTeX/releases/tag/v0.19.0">https://github.com/KaTeX/KaTeX/releases/tag/v0.19.0</a></p>
+          <p>Satterthwaite, F. E. (1946). An approximate distribution of estimates of variance components. <i>Biometrics Bulletin, 2</i>(6), 110-114. <a href="https://doi.org/10.2307/3002019">https://doi.org/10.2307/3002019</a></p>
+          <p>StataCorp. (2025). <i>Stata 19 base reference manual</i>. Stata Press. <a href="https://www.stata.com/manuals/r.pdf">https://www.stata.com/manuals/r.pdf</a></p>
+          <p>Welch, B. L. (1947). The generalization of ‘Student’s’ problem when several different population variances are involved. <i>Biometrika, 34</i>(1/2), 28-35. <a href="https://doi.org/10.2307/2332510">https://doi.org/10.2307/2332510</a></p>
+        </div>
+      </details>
+    </article>
+  </main>
+  <footer style="justify-content: center; text-align: center;"><span>© 2026 <a href="https://cblam202.github.io/home">Chanh Bao Lam</a></span></footer>
+</body>
+</html>

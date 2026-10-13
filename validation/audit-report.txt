@@ -1,0 +1,102 @@
+Teaching demo audit
+2026-10-09
+
+Outcome
+The reviewed statistical formulas are consistent with Stata 19. All numerical
+and scripted interaction checks pass after the corrections below. This audit
+covers the one-sample z-test, one-sample t-test, paired t-test, and independent
+t-tests using pooled, Satterthwaite, and Stata's Welch (1947) methods.
+
+Confirmed issues corrected
+1. Native step="0.5" validation rejected typed values outside the half-unit grid.
+   Fractional inputs now anchor their step at the entered value, keeping full
+   precision while retaining 0.5 spinner increments. Sample size stays integral;
+   SD must remain positive. The observed input no longer truncates to seven
+   significant digits when switching controls.
+2. The normal approximation had absolute probability errors around 1.5e-8 in
+   tested near-zero cases. Replaced it with a more accurate complementary error
+   function calculation. Quantile inversion now compares tail probabilities
+   directly, avoiding cancellation for probabilities near zero or one. The t
+   calculation also avoids cancellation near zero and in large-df gamma ratios.
+3. A p-value very close to alpha could round to alpha while the comparison said
+   less/greater. The display now adds digits as needed; decisions still use the
+   unrounded probability.
+4. The one-sample chart iterated through every candidate tick even when most
+   were hidden. Large finite statistics could therefore take excessive time.
+   It now iterates only through ticks actually displayed.
+
+Independent checks
+- Existing Stata reference suite: 11 cases, 285 comparisons pass at 1e-9
+  absolute/relative tolerance.
+- New Stata suite: 200 cases, 2,000 comparisons. Includes 40 z-tests and 160
+  t-tests, unequal sample sizes, df as low as 1, very different SDs, positive
+  and negative statistics, and confidence levels 90%, 95%, and 99%.
+  Checks statistics, df, SE, all tail probabilities, two-sided CI bounds,
+  and one-sided bounds computed using Stata's inverse distribution functions.
+- Independent SciPy 1.13.1 references: 504 PDF, CDF, and quantile values. Includes
+  normal and t distributions, fractional df, df from 1 to 1,000,000, and
+  quantile probabilities from 1e-12 to 1-1e-12.
+- Additional tests check CI/test agreement just above and below each cutoff,
+  CI transformations between original and standardized scales, reversed pairs,
+  location invariance, missing-data handling, and malformed input rejection.
+- New numerical audit total: 2,987 comparisons. Maximum normalized difference
+  was 2.27e-11, below the 1e-9 criterion. Normalization is absolute error divided
+  by max(1, abs(reference)). For tiny t-test p-values, relative accuracy is
+  additionally checked at 1e-8. Stata's tiny normal p-values can reflect
+  subtraction rounding; normal probabilities also have independent SciPy checks.
+- Page scripts: 90 combinations of distributions/designs, variance methods,
+  directions, alpha values, and scales, plus precision, invalid-input, reset,
+  and slider endpoint checks. Showing/hiding CI does not move the axis.
+- All 18 methodology equations compile with bundled KaTeX. Local asset links
+  and duplicate HTML IDs checked on all three pages.
+
+RCADS example
+Source: Group work 3 - p7 RCADS.xlsx, Sheet1!B3:C137, 135 paired observations.
+The source workbook was read without changing it. Stored values were compared
+with a fresh Stata import and with the site's paired-test calculation.
+
+                         Full precision           Rounded to 2 decimals
+Mean difference          1.401761111111111        1.401925925925925
+Standard error           0.765574345016886        0.765601036731176
+t                        1.830992796761225        1.831144236574723
+Two-sided p              0.069323089745216        0.069300343546687
+95% CI lower            -0.112411548193959       -0.112299524939195
+95% CI upper             2.915933770416181        2.916151376791044
+
+The full-precision calculation agrees with the posted key and fresh Stata output.
+The two-decimal calculation reproduces the earlier website output. The RCADS
+discrepancy was input rounding, not the paired-test formula.
+
+Interpretation and intentional behavior
+- CI level is 100(1-alpha)%. One-sided CIs match the selected alternative and
+  use infinite endpoints. Stata's ordinary ttest table gives two-sided CIs;
+  the website's one-sided display is an intentional teaching choice.
+- In the standardized view, a mean CI is transformed using the observed SE.
+  It is not a separate CI for the random t statistic or for an independently
+  estimated standardized effect size. The displayed SE of 1 denotes the scale
+  unit; it is not the standard deviation of the t distribution.
+- Decisions use p < alpha. At exact equality, the demo does not reject.
+  As with any floating-point calculation, distinctions at machine precision
+  should not be interpreted as substantively meaningful.
+- Zero test SE and too few usable observations are rejected. Independent
+  missing values are omitted per column; paired missing values per pair.
+
+Scope limits
+No browser or visual review was performed, per the instructor's preference.
+The DOM harness executes the real page scripts but models browser form
+constraints; native spinner behavior, focus, and layout still need the
+instructor's visual check. Finite test coverage is evidence of correctness,
+not a proof for every possible input or unrepresentable numerical magnitude.
+
+Reproduce
+node test-math.cjs
+node test-ttests.cjs
+node test-audit.cjs
+node test-ui-audit.cjs
+
+Independent fixture generation (Python with SciPy, Stata 19 required):
+python3 validation/generate-audit.py
+stata-mp -b do validation/stata-audit.do
+
+RCADS Stata check: validation/stata-rcads.do (uses the local course file path).
+The raw workbook data have not been copied into the website repository.

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Two-sample tests • Teaching demo</title>
+  <meta name="author" content="Chanh Bao Lam">
+  <meta name="description" content="Explore independent and paired samples t-tests with interactive distributions and p-values.">
+  <meta name="theme-color" content="#512888">
+  <link rel="stylesheet" href="katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="app.js"></script>
+  <script defer src="ttests.js"></script>
+  <script defer src="ttest-view.js"></script>
+  <script defer src="two-sample.js"></script>
+  <script defer src="katex/katex.min.js"></script>
+  <script defer src="math.js"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">EDCI 913 STATISTICAL ANALYSIS IN C&amp;I</p><h1>Two-sample tests</h1></div>
+    <div class="header-actions"><a class="quiet" href="index.html">Teaching demos</a><button id="reset-two" class="quiet" type="button">Reset</button></div>
+  </header>
+  <main>
+    <aside aria-label="Test controls">
+      <section>
+        <h2>Study design</h2>
+        <label class="field stacked">Samples<select id="design"><option value="independent">Independent (unpaired)</option><option value="paired">Dependent (paired)</option></select></label>
+        <div id="independent-options">
+          <label class="field stacked">Variance assumption<select id="method"><option value="pooled">Equal variances (pooled)</option><option value="unequal">Unequal: Satterthwaite</option><option value="welch">Unequal: Welch (1947)</option></select></label>
+        </div>
+      </section>
+      <section id="raw-inputs">
+        <label class="field stacked" for="observations">Observations: sample 1, sample 2</label>
+        <textarea id="observations" rows="12" spellcheck="false" aria-describedby="data-note">20 24
+23 25
+21 21
+25 22
+18 23
+17 18
+18 17
+24 28
+20 24
+24 27
+23 21
+19 23</textarea>
+        <p id="data-note" class="hint">One sample per column; rows are not paired. Separate values with spaces, tabs, or commas. Use dots (.) for missing values or a shorter column.</p>
+      </section>
+      <section>
+        <h2>Test direction</h2>
+        <fieldset class="choices"><legend class="sr-only">Test direction</legend>
+          <label><input type="radio" name="tail" value="two" checked> Two-tailed</label>
+          <label><input type="radio" name="tail" value="right"> Right-tailed</label>
+          <label><input type="radio" name="tail" value="left"> Left-tailed</label>
+        </fieldset>
+        <h2>Significance level <i>α</i></h2>
+        <fieldset class="segmented alpha"><legend class="sr-only">Significance level</legend>
+          <label><input type="radio" name="alpha" value="0.10"><span>0.10</span></label>
+          <label><input type="radio" name="alpha" value="0.05" checked><span>0.05</span></label>
+          <label><input type="radio" name="alpha" value="0.01"><span>0.01</span></label>
+        </fieldset>
+        <p class="hint">Difference = sample 1 − sample 2.</p>
+      </section>
+    </aside>
+    <article>
+      <p id="input-error" class="input-error" role="alert" hidden></p>
+      <div id="two-output">
+        <div class="chart-heading"><div><h2>Student’s t distribution</h2><p id="two-subtitle">Assuming H₀: difference = 0</p></div></div>
+      <div class="legend"><span><b class="swatch rejection"></b>Rejection region (α)</span><span><b class="swatch probability"></b>p-value</span></div>
+        <svg id="two-plot" viewBox="0 0 1000 380" role="img" aria-label="Student’s t distribution with the selected p-value and rejection regions"></svg>
+        <div id="two-results" aria-live="polite"></div>
+        <section>
+          <h2 id="data-chart-title">Comparing variability</h2>
+          <svg id="data-plot" viewBox="0 0 1000 280" role="img" aria-label="Sample variability"></svg>
+          <p id="data-chart-note" class="hint"></p>
+        </section>
+        <details class="methodology"><summary>Methodology</summary><div id="method-independent"><p>The test compares the population means using the observed difference, sample 1 minus sample 2.</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo>=</mo><mfrac><mrow><msub><mover><mi>x</mi><mo>¯</mo></mover><mrow><mn>1</mn></mrow></msub><mo>−</mo><msub><mover><mi>x</mi><mo>¯</mo></mover><mrow><mn>2</mn></mrow></msub></mrow><mrow><mi>SE</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">t=\frac{\bar{x}_1-\bar{x}_2}{SE}</annotation></semantics></math></div><div id="method-pooled"><h3>Equal variances</h3><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msup><msub><mi>s</mi><mrow><mi>p</mi></mrow></msub><mrow><mn>2</mn></mrow></msup><mo>=</mo><mfrac><mrow><mo>(</mo><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub><mo>−</mo><mn>1</mn><mo>)</mo><msup><msub><mi>s</mi><mrow><mn>1</mn></mrow></msub><mrow><mn>2</mn></mrow></msup><mo>+</mo><mo>(</mo><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub><mo>−</mo><mn>1</mn><mo>)</mo><msup><msub><mi>s</mi><mrow><mn>2</mn></mrow></msub><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub><mo>−</mo><mn>2</mn></mrow></mfrac></mrow><annotation encoding="application/x-tex">s_p^2=\frac{(n_1-1)s_1^2+(n_2-1)s_2^2}{n_1+n_2-2}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>SE</mi><mo>=</mo><msub><mi>s</mi><mrow><mi>p</mi></mrow></msub><msqrt><mfrac><mrow><mn>1</mn></mrow><mrow><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub></mrow></mfrac><mo>+</mo><mfrac><mrow><mn>1</mn></mrow><mrow><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub></mrow></mfrac></msqrt></mrow><annotation encoding="application/x-tex">SE=s_p\sqrt{\frac{1}{n_1}+\frac{1}{n_2}}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>df</mi><mo>=</mo><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub><mo>+</mo><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub><mo>−</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">df=n_1+n_2-2</annotation></semantics></math></div></div><div id="method-unpooled"><h3>Unequal variances</h3><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>a</mi><mo>=</mo><mfrac><mrow><msup><msub><mi>s</mi><mrow><mn>1</mn></mrow></msub><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub></mrow></mfrac><mo>,</mo><mi>b</mi><mo>=</mo><mfrac><mrow><msup><msub><mi>s</mi><mrow><mn>2</mn></mrow></msub><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">a=\frac{s_1^2}{n_1},\quad b=\frac{s_2^2}{n_2}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>SE</mi><mo>=</mo><msqrt><mi>a</mi><mo>+</mo><mi>b</mi></msqrt></mrow><annotation encoding="application/x-tex">SE=\sqrt{a+b}</annotation></semantics></math></div><div id="method-unequal"><p>Satterthwaite (1946)</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>df</mi><mo>=</mo><mfrac><mrow><msup><mrow><mo>(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mfrac><mrow><msup><mi>a</mi><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub><mo>−</mo><mn>1</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><msup><mi>b</mi><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub><mo>−</mo><mn>1</mn></mrow></mfrac></mrow></mfrac></mrow><annotation encoding="application/x-tex">df=\frac{(a+b)^2}{a^2/(n_1-1)+b^2/(n_2-1)}</annotation></semantics></math></div></div><div id="method-welch"><p>Welch (1947)</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>df</mi><mo>=</mo><mo>−</mo><mn>2</mn><mo>+</mo><mfrac><mrow><msup><mrow><mo>(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mo>)</mo></mrow><mrow><mn>2</mn></mrow></msup></mrow><mrow><mfrac><mrow><msup><mi>a</mi><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>1</mn></mrow></msub><mo>+</mo><mn>1</mn></mrow></mfrac><mo>+</mo><mfrac><mrow><msup><mi>b</mi><mrow><mn>2</mn></mrow></msup></mrow><mrow><msub><mi>n</mi><mrow><mn>2</mn></mrow></msub><mo>+</mo><mn>1</mn></mrow></mfrac></mrow></mfrac></mrow><annotation encoding="application/x-tex">df=-2+\frac{(a+b)^2}{a^2/(n_1+1)+b^2/(n_2+1)}</annotation></semantics></math></div></div></div></div><div id="method-paired"><h3>Dependent (paired) t-test</h3><p>For each complete pair, dᵢ = xᵢ − yᵢ. Let d̄ be the mean difference, s<sub>d</sub> its sample SD, and n the number of complete pairs.</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>SE</mi><mo>=</mo><mfrac><mrow><msub><mi>s</mi><mrow><mi>d</mi></mrow></msub></mrow><mrow><msqrt><mi>n</mi></msqrt></mrow></mfrac></mrow><annotation encoding="application/x-tex">SE=\frac{s_d}{\sqrt{n}}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>t</mi><mo>=</mo><mfrac><mrow><mover><mi>d</mi><mo>¯</mo></mover></mrow><mrow><mi>SE</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">t=\frac{\bar d}{SE}</annotation></semantics></math></div><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>df</mi><mo>=</mo><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">df=n-1</annotation></semantics></math></div></div><h3>Sample SD</h3><p>Each sample SD uses n − 1 in the denominator. Independent tests omit missing values separately; paired tests omit incomplete pairs.</p><h3>Confidence interval</h3><p>Confidence level is 100(1 − α)%. For two-tailed tests, q is the 1 − α/2 quantile and the interval is shown below. For right-tailed tests, q is the 1 − α quantile and the interval extends from the lower bound to ∞. For left-tailed tests, it extends from −∞ to the upper bound.</p><p>Let Δ̂ be the sample mean difference, or d̄ for paired data.</p><div class="formula"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mo>[</mo><mi>Δ̂</mi><mo>−</mo><mi>q</mi><mi>SE</mi><mo>,</mo><mi>Δ̂</mi><mo>+</mo><mi>q</mi><mi>SE</mi><mo>]</mo></mrow><annotation encoding="application/x-tex">[\hat\Delta-qSE,\;\hat\Delta+qSE]</annotation></semantics></math></div><h3>p-value and critical values</h3><p>The p-value is the area beyond the observed statistic in the selected tail, or both tails for a two-tailed test. Critical values leave α in the selected tail, or α/2 in each tail. Reject H₀ when p-value &lt; α.</p></details>
+      <details class="references"><summary>About and references</summary>
+        <p>This demonstration was developed by Chanh Lam with assistance from OpenAI Codex for instructional use in EDCI 913: Statistical Analysis in Curriculum and Instruction at Kansas State University. The calculation methods and example data follow Stata 19’s reference manual (StataCorp, 2025). Unequal variance calculations use Satterthwaite’s (1946) and Welch’s (1947) methods, as implemented in Stata. Equations are typeset using KaTeX (Khan Academy and other contributors, 2026) under the <a href="katex/LICENSE.txt">MIT License</a>.</p>
+        <div class="reference-list">
+          <p>Khan Academy and other contributors. (2026). <i>KaTeX</i> (Version 0.19.0) [Computer software]. <a href="https://github.com/KaTeX/KaTeX/releases/tag/v0.19.0">https://github.com/KaTeX/KaTeX/releases/tag/v0.19.0</a></p>
+          <p>Satterthwaite, F. E. (1946). An approximate distribution of estimates of variance components. <i>Biometrics Bulletin, 2</i>(6), 110-114. <a href="https://doi.org/10.2307/3002019">https://doi.org/10.2307/3002019</a></p>
+          <p>StataCorp. (2025). <i>Stata 19 base reference manual</i>. Stata Press. <a href="https://www.stata.com/manuals/r.pdf">https://www.stata.com/manuals/r.pdf</a></p>
+          <p>Welch, B. L. (1947). The generalization of ‘Student’s’ problem when several different population variances are involved. <i>Biometrika, 34</i>(1/2), 28-35. <a href="https://doi.org/10.2307/2332510">https://doi.org/10.2307/2332510</a></p>
+        </div>
+      </details>
+      </div>
+    </article>
+  </main>
+  <footer style="justify-content:center;text-align:center"><span>© 2026 <a href="https://cblam202.github.io/home">Chanh Bao Lam</a></span></footer>
+</body>
+</html>
