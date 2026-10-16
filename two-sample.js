@@ -11,7 +11,13 @@
   const text=(x,y,value,anchor="middle")=>tag("text",{x,y,"text-anchor":anchor},value);
   const line=(x1,y1,x2,y2,color,dash="")=>tag("line",{x1,y1,x2,y2,stroke:color,"stroke-width":1.5,"stroke-dasharray":dash});
   // 2. Null reference distribution and confidence interval for the selected direction.
-  function drawTest(result,tail,alpha) {
+  function drawTest(result,tail,alpha,scale) {
+    const originalScale=scale==="original";
+    // Draw in t coordinates; original units are t × estimated SE, centered at zero.
+    const axis=value=>originalScale?value*result.se:value;
+    const title=originalScale?"Student’s t on the original scale":"Student’s t distribution";
+    $("two-chart-title").textContent=title;
+    $("two-plot").setAttribute("aria-label",title+" with the selected p-value and rejection regions");
     const critical=Stats.quantile(1-alpha/(tail==="two"?2:1),"t",result.df);
     const bounds=TTestView.interval(result.t,1,"t",result.df,tail,alpha);
     const domain=Math.max(4.4,critical*1.3,Math.abs(result.t)*1.18,Math.max(...bounds.filter(Number.isFinite).map(Math.abs))*1.12),base=270;
@@ -29,18 +35,18 @@
     }
     const bands=tail==="two"?[[-domain,-critical],[critical,domain]]:tail==="left"?[[-domain,-critical]]:[[critical,domain]];
     const areas=tail==="two"?[[-domain,-Math.abs(result.t)],[Math.abs(result.t),domain]]:tail==="left"?[[-domain,result.t]]:[[result.t,domain]];
-    let svg=tag("title",{},"Student’s t distribution; "+tail+"-tailed p-value "+result.p[tail]);
+    let svg=tag("title",{},title+"; "+tail+"-tailed p-value "+result.p[tail]);
     bands.forEach(([a,b])=>{svg+=tag("path",{d:path(a,b,true),fill:"#efb8bc"})+tag("rect",{x:px(a),y:base+4,width:px(b)-px(a),height:2,fill:"#c44248"});});
     areas.forEach(([a,b])=>{svg+=tag("path",{d:path(a,b,true),fill:"#9270b9","fill-opacity":.75});});
     svg+=tag("path",{d:path(-domain,domain,false),fill:"none",stroke:"#001641","stroke-width":2.5})+line(65,base,935,base,"#8b98ab");
     svg+=line(px(0),60,px(0),base,"#bcc5d2","4 6");
-    for(let i=-2;i<=2;i++) {const value=i*domain/2;svg+=text(px(value),base+32,Number(value.toFixed(2)));}
-    svg+=line(px(result.t),40,px(result.t),base,"#001641","5 4")+text(Math.max(145,Math.min(855,px(result.t))),25,"Observed t = "+result.t.toFixed(4));
+    for(let i=-2;i<=2;i++) {const value=i*domain/2;svg+=text(px(value),base+32,originalScale?Number(axis(value).toPrecision(4)):Number(value.toFixed(2)));}
+    svg+=line(px(result.t),40,px(result.t),base,"#001641","5 4")+text(Math.max(145,Math.min(855,px(result.t))),25,originalScale?"Observed difference = "+fmt(result.estimate):"Observed t = "+result.t.toFixed(4));
     svg+=tag("circle",{cx:px(result.t),cy:base,r:6,fill:"#001641"});
-    svg+=text(500,base+70,"Standardized statistic (t)");
+    svg+=text(500,base+70,originalScale?"Mean difference (original scale)":"Standardized statistic (t)");
     if(showCI) {
       const y=base+17;
-      svg+=tag("g",{class:"ci-overlay",role:"img","aria-label":result.level+"% confidence interval on the standardized scale: "+TTestView.intervalText(bounds)},
+      svg+=tag("g",{class:"ci-overlay",role:"img","aria-label":result.level+"% confidence interval on the "+(originalScale?"original":"standardized")+" scale: "+TTestView.intervalText(bounds.map(axis))},
         line(px(Math.max(-domain,bounds[0])),y,px(Math.min(domain,bounds[1])),y,"#176b57")
         +bounds.map(value=>{
           if(Number.isFinite(value)) return line(px(value),y-5,px(value),y+5,"#176b57");
@@ -69,7 +75,7 @@
         differences.slice(0,1000).forEach(value=>{const key=Math.round(px(value)/9),count=stacks.get(key)||0;stacks.set(key,count+1);svg+=tag("circle",{cx:px(value),cy:190-count*155/maxCount,r:2.5,fill:"#512888"});});
       }
       for(let i=0;i<=4;i++){const value=low+(high-low)*i/4;svg+=text(px(value),225,Number(value.toFixed(2)));}
-      svg+=text(500,263,"Difference (sample 1 − sample 2)");
+      svg+=text(500,263,"Difference (Sample 1 - Sample 2)");
       $("data-chart-title").textContent="Within-pair differences";
       $("data-chart-note").textContent=(result.omitted?result.omitted+" incomplete pair(s) excluded. ":"")+(differences.length>1000?"First 1,000 differences shown; all complete pairs included in the test.":"");
     } else {
@@ -110,7 +116,8 @@
       const first=TTests.summarize(pairs.map(pair=>pair[0])),second=TTests.summarize(pairs.map(pair=>pair[1]));
       const result=design==="paired"?TTests.paired(pairs,level):TTests.independent(first,second,method,level);
       TTestView.render($("two-results"),result,tail,alpha);
-      drawTest(result,tail,alpha);drawData(result,pairs);
+      TTestView.renderDescriptives($("descriptive-results"),result);
+      drawTest(result,tail,alpha,document.querySelector('input[name="scale"]:checked').value);drawData(result,pairs);
       $("two-subtitle").textContent="H₀: difference = 0 · "+(design==="paired"?"Pairs = "+result.rows[0].n:"n₁ = "+first.n+" · n₂ = "+second.n)+" · DF = "+fmt(result.df);
 
       $("input-error").hidden=true;$("two-output").hidden=false;
@@ -127,6 +134,7 @@
     showCI=false;
     $("design").value="independent";$("method").value="pooled";
     document.querySelector('input[name="alpha"][value="0.05"]').checked=true;
+    document.querySelector('input[name="scale"][value="standard"]').checked=true;
     $("observations").value=fuel;document.querySelector('input[name="tail"][value="two"]').checked=true;render();
   });
   render();

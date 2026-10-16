@@ -29,11 +29,13 @@ Changing α holds p fixed.
 ## Two-sample controls
 
 - Choose Independent (unpaired) or Dependent (paired).
+- Choose Standardized or Original scale for the test chart. Original units equal t × estimated SE, centered at the null difference of zero. Shading and optional CIs follow the selected scale; numerical results stay unchanged. Reset restores Standardized.
 - Paste two columns of observations for either design. Sample sizes, means, and SDs are calculated automatically. For independent samples with different sizes, pad the shorter column with dots.
 - Choose equal variances (Stata default), unequal (Satterthwaite), or welch (Welch 1947).
 - Paired tests require two columns of matched observations, one pair per row. They use the SD of the differences, not a pooled SD.
 - Use a dot for missing data. Paired tests drop incomplete pairs from both summaries and the test. Independent tests omit missing observations separately in each column.
 - Differences are always x minus y. Tail buttons select one p-value to display, rather than displaying all three together.
+- Descriptive statistics above the lower chart show N, mean, and SD in original units. Paired summaries use complete pairs and include the mean and SD of within-pair differences. Independent summaries omit missing observations per sample and report the mean difference; difference-row N and SD are not applicable.
 - The lower chart illustrates sample variability. Independent sample curves are normal illustrations based on the summaries, not evidence of normality. Paired data show individual differences.
 
 ## Matching Stata 19

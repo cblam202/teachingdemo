@@ -35,5 +35,14 @@ const TTestView = (() => {
       +"<div><span class='result-label'>p-value</span><strong>"+displayedP+"</strong><small>"+(reject?"&lt; ":p===alpha?"= ":"&gt; ")+"α = "+alpha.toFixed(2)+"</small></div>"
       +"<div class='"+(reject?"reject":"")+"'><span class='result-label'>Decision</span><strong>"+(reject?"Reject H₀":"Fail to reject H₀")+"</strong><small>"+(reject?"Statistically significant":"Not statistically significant")+"</small></div></div>";
   }
-  return {render,number,probability,interval,intervalText};
+  // 3. Descriptive statistics use original units and the same observations as the test.
+  function renderDescriptives(target,result) {
+    const difference=result.kind==="paired"?result.rows[2]:{n:null,mean:result.estimate,sd:null};
+    const rows=[...result.rows.slice(0,2),difference],labels=["Sample 1","Sample 2","Difference (Sample 1 - Sample 2)"];
+    const cell=value=>value===null?'<span aria-label="Not applicable">—</span>':number(value);
+    target.innerHTML='<table class="descriptive-table" aria-labelledby="descriptive-title"><thead><tr><th scope="col">Sample</th><th scope="col">N</th><th scope="col">Mean</th><th scope="col">SD</th></tr></thead><tbody>'
+      +rows.map((row,i)=>'<tr><th scope="row">'+labels[i]+'</th><td>'+cell(row.n)+'</td><td>'+cell(row.mean)+'</td><td>'+cell(row.sd)+'</td></tr>').join("")
+      +'</tbody></table>';
+  }
+  return {render,renderDescriptives,number,probability,interval,intervalText};
 })();

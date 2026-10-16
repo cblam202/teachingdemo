@@ -259,6 +259,8 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
     draw(stat,crit);
     $("method-z").hidden=state.kind!=="z";
     $("method-t").hidden=state.kind!=="t";
+    $("ci-method-z").hidden=state.kind!=="z";
+    $("ci-method-t").hidden=state.kind!=="t";
     $("interval-label").textContent=Math.round(100*(1-state.alpha))+"% confidence interval";
     $("interval-label").title=originalScale?(state.tail==="two"?"Two-sided":"One-sided")+" confidence interval for the population mean":"Population mean confidence interval expressed as (μ − μ₀) / SE";
     if (Number.isFinite(stat)) {
