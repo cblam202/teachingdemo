@@ -23,3 +23,9 @@
 
 /* 7. Descriptive statistics above the sample variability chart. */
 .descriptive-wrap{overflow-x:auto}.descriptive-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}.descriptive-table th,.descriptive-table td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.descriptive-table th:first-child{text-align:left;padding-left:0;white-space:normal}.descriptive-table th:last-child,.descriptive-table td:last-child{padding-right:0}.descriptive-table thead th{color:var(--muted);font-weight:600}.descriptive-table tbody th{font-weight:500}.descriptive-table tbody tr:last-child th,.descriptive-table tbody tr:last-child td{border-bottom:0}
+
+/* 8. Three demo choices and correlation/regression output. */
+@media(min-width:1050px){.demo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.demo-card{padding:26px}.demo-card h2{font-size:23px}}
+.correlation-page .fit-summary{color:var(--navy);font-size:14px;margin:0 0 18px;font-variant-numeric:tabular-nums}
+.correlation-page #observation-note{margin-bottom:18px}.correlation-page .endpoint{margin:18px 0 0}
+.correlation-page .ci-toggle:disabled{opacity:.5;cursor:default}.correlation-page #scatter-plot,.correlation-page #sampling-plot{touch-action:pan-y}

@@ -1,0 +1,48 @@
+Correlation and regression validation
+Completed: 2026-11-03
+
+1. Independent numerical references
+PASS: 2,635 comparisons with SciPy 1.13.1 across 32 datasets.
+The fixtures include 288 combinations of tail and alpha, plus 42 density values.
+Pearson p-values and critical correlations use SciPy's beta distribution as an
+independent reference for the site's equivalent t-based calculations.
+Fisher intervals, regression estimates, standard errors, residual SD, and slope
+intervals are checked alongside descriptive statistics and missing-pair handling.
+Additional checks cover reversing variables/signs, changing units by factors as
+small as 1e-150 or as large as 1e150, endpoints, and invalid inputs.
+
+PASS: 72 comparisons with six actual Stata 19 pwcorr/regress cases.
+Cases cover the teaching example, incomplete rows, zero correlation, N=3, and
+negative/positive associations. The script and CSV are saved beside this report.
+Stata log copies omit startup details and local paths; numbers are unchanged.
+Regression uses conventional OLS standard errors, with an intercept.
+
+2. Page behavior
+PASS: 144 combinations of method, tail, alpha, and plot scale in a DOM harness.
+Checks cover result units, confidence intervals, original r-axis limits, zero
+centering, finite SVG coordinates, Reset, optional regression line, complete-pair
+descriptive statistics, invalid-input handling, and precision of pasted values.
+Showing the confidence interval preserves the chart's existing geometry.
+Perfect correlations and N=3 receive their defined results or explicit limits.
+All observations enter calculations; a notice identifies scatterplots displaying
+only the first 1,000 points. Local assets, navigation, IDs, and KaTeX equations pass.
+
+3. Existing demos
+PASS: test-math.cjs, test-ttests.cjs, test-audit.cjs, and test-ui-audit.cjs.
+The existing probability engine and one-/two-sample calculations were not edited
+for this addition. Existing chatbot integration was not changed.
+
+4. Interpretation and display limits
+The original correlation chart uses the exact null r density for independent
+bivariate normal observations under rho=0. Its standardized view uses t with
+n-2 degrees of freedom. The Fisher confidence interval is approximate; it can
+disagree with the exact test near a cutoff and is unavailable for N=3.
+At N=3, the unbounded endpoint density is clipped and identified on the page.
+Perfect regression fits have zero residual variance; slope inference is withheld.
+The regression slope chart reexpresses the null t curve using the observed SE.
+Extreme t values beyond +/-100 are marked at the plot edge with a notice.
+
+5. Scope of verification
+No browser or local server was opened. DOM checks do not verify rendered layout,
+native browser interactions, or accessibility with an actual screen reader.
+Visual review remains with the instructor. Nothing was committed or published.

@@ -116,12 +116,24 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
   const state={kind:"z",scale:"standard",tail:"two",alpha:.05,p:Stats.pValue(7/3,"two","z",24),df:24,mean:100,sd:15,se:3,sign:1,n:25,showCI:false,observed:7/3};
   const defaults={...state}, plot=$("plot");
   const g={left:65,right:950,top:60,base:355};
-  let domain=4.4,dragDomain=null,dragging=false;
+  let domain=4.4,dragDomain=null,dragging=false,inputError="";
   const q=p=>Stats.quantile(p,state.kind,state.df);
   const pdf=x=>Stats.pdf(x,state.kind,state.df);
   const original=x=>state.mean+x*state.se;
   const axis=x=>state.scale==="original" ? original(x) : x;
   const symbol=()=>state.kind;
+  // Read-only context for the optional assistant; preserve the calculation and input paths.
+  globalThis.readTeachingDemo=()=>{
+    const stat=statistic();
+    if (inputError || ["mean","sd","n"].some(id=>!$(id).checkValidity()) || (Number.isFinite(stat) && !$("observed").checkValidity()))
+      return {page:"one-sample",valid:false};
+    if (!Number.isFinite(stat)) return {page:"one-sample",valid:false,reason:"Infinite slider endpoint; no finite estimate or confidence interval."};
+    return {page:"one-sample",valid:true,test:"One-sample "+state.kind+"-test",scale:state.scale,tail:state.tail,alpha:state.alpha,
+      nullValue:state.mean,estimate:original(stat),n:state.n,sd:state.sd,sdType:state.kind==="z"?"Known population SD":"Sample SD",
+      se:state.se,statistic:{symbol:state.kind,value:stat},df:state.kind==="t"?state.df:null,p:state.p,
+      decision:state.p<state.alpha?"Reject H₀":"Fail to reject H₀",confidenceLevel:100*(1-state.alpha),
+      confidenceInterval:TTestView.interval(original(stat),state.se,state.kind,state.df,state.tail,state.alpha)};
+  };
   function probability(p) {
     if (p>0 && p<.0001) return p.toExponential(2);
     if (p!==state.alpha && Number(p.toFixed(4))===state.alpha) return TTestView.probability(p,state.alpha);
@@ -226,9 +238,21 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
     plot.innerHTML=svg;
   }
   function render(keepObservedInput=false) {
-    const stat=statistic(),crit=criticals();
-    const reject=state.p<state.alpha, boundary=state.p===state.alpha;
     $("sd-label").textContent=state.kind==="t"?"Standard deviation (sample estimate)":"Standard deviation (known population)";
+    $("method-z").hidden=state.kind!=="z";$("method-t").hidden=state.kind!=="t";
+    $("ci-method-z").hidden=state.kind!=="z";$("ci-method-t").hidden=state.kind!=="t";
+    if (inputError) return;
+    const stat=statistic(),crit=criticals();
+    if (Number.isFinite(stat)) {
+      const bounds=TTestView.interval(original(stat),state.se,state.kind,state.df,state.tail,state.alpha);
+      const finiteBounds=state.tail==="two"?bounds:state.tail==="right"?[bounds[0]]:[bounds[1]];
+      const standardizedBounds=TTestView.interval(stat,1,state.kind,state.df,state.tail,state.alpha);
+      const plotLimit=Math.max(4.4,...crit.map(value=>Math.abs(value)*1.25),Math.abs(stat)*1.18,...standardizedBounds.filter(Number.isFinite).map(value=>Math.abs(value)*1.12));
+      if (![...finiteBounds,plotLimit*2,original(-plotLimit),original(plotLimit)].every(Number.isFinite)) {
+        showInputError("These values exceed the numerical range. Rescale the inputs.");return;
+      }
+    }
+    const reject=state.p<state.alpha, boundary=state.p===state.alpha;
     $("p-slider").value=Math.round(state.p*100)/100;
     $("p-output").textContent=probability(state.p);
     if (!keepObservedInput) {
@@ -257,10 +281,6 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
     $("endpoint-note").hidden=Number.isFinite(stat);
     $("endpoint-note").textContent="Infinite statistic; marker shown at the chart edge.";
     draw(stat,crit);
-    $("method-z").hidden=state.kind!=="z";
-    $("method-t").hidden=state.kind!=="t";
-    $("ci-method-z").hidden=state.kind!=="z";
-    $("ci-method-t").hidden=state.kind!=="t";
     $("interval-label").textContent=Math.round(100*(1-state.alpha))+"% confidence interval";
     $("interval-label").title=originalScale?(state.tail==="two"?"Two-sided":"One-sided")+" confidence interval for the population mean":"Population mean confidence interval expressed as (μ − μ₀) / SE";
     if (Number.isFinite(stat)) {
@@ -271,7 +291,18 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
     }
   }
 
-  // 3. Form input and dragging. Invalid entries retain the last valid plot.
+  // 3. Form input and dragging. Invalid entries hide old results until corrected.
+  function showInputError(message="") {
+    inputError=message;$("input-error").textContent=message;
+    $("input-error").hidden=!message;$("one-output").hidden=!!message;
+  }
+  function inputProblem(includeObserved=true) {
+    if (!$("n").checkValidity()) return "Enter a whole-number sample size from 2 to 10,001.";
+    if (!$("mean").checkValidity()) return "Enter a finite mean under H₀.";
+    if (!$("sd").checkValidity() || !(Number($("sd").value)>0)) return "Enter a standard deviation greater than zero.";
+    if (includeObserved&&!$("observed").checkValidity()) return "Enter a finite sample mean.";
+    return "";
+  }
   document.querySelectorAll('input[type="radio"]').forEach(input=>{
     input.addEventListener("change",()=>{
       const observed=statistic();
@@ -281,27 +312,23 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
       render();
     });
   });
-  ["mean","sd","n"].forEach(id=>$(id).addEventListener("input",()=>{
-    const value=Number($(id).value);
+  ["mean","sd","n","observed"].forEach(id=>$(id).addEventListener("input",()=>{
     // Anchor native 1-unit spinner steps at the entered value without rejecting other decimals.
     if (id!=="n") $(id).defaultValue=$(id).value;
-    if (id==="sd") $(id).setCustomValidity(value>0?"":"Enter a standard deviation greater than zero.");
-    if (!$(id).checkValidity() || !Number.isFinite(value)) return;
-    const z=statistic(),raw=original(z);
-    state[id]=value;
-    state.se=state.sd/Math.sqrt(state.n);
-    state.df=state.n-1;
-    setObserved((raw-state.mean)/state.se);
-    render();
+    $("sd").setCustomValidity(Number($("sd").value)>0?"":"Enter a standard deviation greater than zero.");
+    const finiteObserved=id==="observed"||Number.isFinite(statistic()),problem=inputProblem(finiteObserved);
+    if (problem) {showInputError(problem);return;}
+    const mean=Number($("mean").value),sd=Number($("sd").value),n=Number($("n").value),se=sd/Math.sqrt(n);
+    const raw=finiteObserved?Number($("observed").value):original(statistic()),z=(raw-mean)/se;
+    if (!(se>0)||!Number.isFinite(se)||finiteObserved&&!Number.isFinite(z)) {
+      showInputError("These values exceed the numerical range. Rescale the inputs.");return;
+    }
+    Object.assign(state,{mean,sd,n,se,df:n-1});setObserved(z);showInputError();render(id==="observed");
   }));
-  $("observed").addEventListener("input",()=>{
-    const value=Number($("observed").value);
-    $("observed").defaultValue=$("observed").value;
-    if(!$("observed").checkValidity() || !Number.isFinite(value))return;
-    setObserved((value-state.mean)/state.se);
-    render(true);
+  $("p-slider").addEventListener("input",e=>{
+    if(inputProblem(false))return;
+    showInputError();state.observed=null;state.p=Number(e.target.value);render();
   });
-  $("p-slider").addEventListener("input",e=>{state.observed=null;state.p=Number(e.target.value);render();});
   $("toggle-ci").addEventListener("click",()=>{state.showCI=!state.showCI;render();});
   $("reset").addEventListener("click",()=>{
     Object.assign(state,defaults);
@@ -311,7 +338,7 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
     document.querySelectorAll('input[type="radio"]').forEach(input=>{
       input.checked=input.name==="alpha"?Number(input.value)===state.alpha:input.value===state[mapping[input.name]];
     });
-    dragDomain=null;render();
+    dragDomain=null;showInputError();render();
   });
   function drag(event) {
     const point=new DOMPoint(event.clientX,event.clientY).matrixTransform(plot.getScreenCTM().inverse());
@@ -323,7 +350,7 @@ if (typeof document!=="undefined" && document.getElementById("observed")) {
     render();
   }
   plot.addEventListener("pointerdown",event=>{
-    if (event.button!==0) return;
+    if (event.button!==0 || inputError) return;
     dragging=true;dragDomain=domain;plot.setPointerCapture(event.pointerId);drag(event);
   });
   plot.addEventListener("pointermove",event=>{if(dragging)drag(event);});

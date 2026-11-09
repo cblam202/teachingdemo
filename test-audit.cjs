@@ -41,4 +41,16 @@ const reversed=TTests.paired(pairs.map(([a,b])=>[b,a]));near(reversed.t,-paired.
 const shifted=TTests.paired(pairs.map(p=>p.map(v=>v===null?null:v+1000)));near(shifted.t,paired.t,'Location invariance');
 for(const text of ['1,,2','1 cat','1 2 3','','Infinity 3','1e999 2'])assert.throws(()=>TTests.parse(text,2));
 assert.throws(()=>TTests.paired([[1,1],[2,2]]),/standard error/);
+// 5. Units must not change unequal-variance degrees of freedom or probabilities.
+const unitPairs=[[20,24],[23,25],[21,21],[25,22]];
+for(const method of ['pooled','unequal','welch']) {
+ const baseline=TTests.independent(TTests.summarize(unitPairs.map(p=>p[0])),TTests.summarize(unitPairs.map(p=>p[1])),method);
+ for(const factor of [1e-100,1e100]) {
+  const scaled=unitPairs.map(pair=>pair.map(value=>value*factor));
+  const result=TTests.independent(TTests.summarize(scaled.map(p=>p[0])),TTests.summarize(scaled.map(p=>p[1])),method);
+  near(result.df,baseline.df,'Unit-invariant df');near(result.t,baseline.t,'Unit-invariant t');
+  for(const tail of ['two','left','right'])near(result.p[tail],baseline.p[tail],'Unit-invariant p');
+ }
+}
+assert.throws(()=>TTests.one({n:2,mean:1e308,sd:1e-10},-1e308),/numerical range/);
 console.log(`${comparisons} audit numerical comparisons passed; ${cases.length} new Stata cases. Maximum normalized error ${maxError}.`);

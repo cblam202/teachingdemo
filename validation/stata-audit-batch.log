@@ -10,10 +10,7 @@ ___/   /   /___/   /   /___/       MP—Parallel Edition
                                    800-782-8272        https://www.stata.com
                                    979-696-4600        service@stata.com
 
-Stata license: Single-user 4-core  perpetual
-Serial number: 501906220380
-  Licensed to: Chanh Bao Lam
-               Kansas State University
+[License details removed for public distribution.]
 
 Notes:
       1. Stata is running in batch mode.
@@ -33,8 +30,7 @@ Notes:
 . log using "validation/stata-audit.log", text replace
 -------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-audit.
-> log
+       log:  validation/stata-audit.log
   log type:  text
  opened on:   9 Oct 2026, 23:51:54
 
@@ -1806,8 +1802,7 @@ Notes:
 
 . log close
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-audit.
-> log
+       log:  validation/stata-audit.log
   log type:  text
  closed on:   9 Oct 2026, 23:51:54
 -------------------------------------------------------------------------------

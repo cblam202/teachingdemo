@@ -10,6 +10,7 @@ const TTests = (() => {
   }
   function interval(mean,se,df,level) {
     const margin=stats().quantile(.5+level/200,"t",df)*se;
+    if (![margin,mean-margin,mean+margin].every(Number.isFinite)) throw new Error("These values exceed the numerical range. Rescale the observations.");
     return [mean-margin,mean+margin];
   }
   function row(sample,label,level) {
@@ -22,6 +23,7 @@ const TTests = (() => {
     if (!(result.se>0) || !Number.isFinite(result.se)) throw new Error("The standard error must be positive to calculate a t-test.");
     result.level=level;
     result.t=(result.estimate-result.nullMean)/result.se;
+    if (!Number.isFinite(result.t) || !Number.isFinite(result.df) || !(result.df>0)) throw new Error("These values exceed the numerical range. Rescale the observations.");
     result.p={left:stats().pValue(result.t,"left","t",result.df),two:stats().pValue(result.t,"two","t",result.df),right:stats().pValue(result.t,"right","t",result.df)};
     result.ci=interval(result.estimate,result.se,result.df,level);
     return result;
@@ -39,9 +41,11 @@ const TTests = (() => {
     let se=Math.sqrt(pooled*(1/first.n+1/second.n)),df=first.n+second.n-2;
     if (method!=="pooled") {
       se=Math.sqrt(a+b);
+      const weight1=a/(a+b),weight2=b/(a+b);
       // Stata's welch option uses Welch (1947), distinct from unequal/Satterthwaite.
-      df=method==="welch" ? -2+(a+b)**2/(a*a/(first.n+1)+b*b/(second.n+1))
-        : (a+b)**2/(a*a/(first.n-1)+b*b/(second.n-1));
+      // Normalize variance contributions before squaring to avoid unit-dependent overflow/underflow.
+      df=method==="welch" ? -2+1/(weight1**2/(first.n+1)+weight2**2/(second.n+1))
+        : 1/(weight1**2/(first.n-1)+weight2**2/(second.n-1));
     }
     const n=first.n+second.n,mean=(first.n*first.mean+second.n*second.mean)/n;
     // Combined SD includes between-group variation; it is not the pooled SD.

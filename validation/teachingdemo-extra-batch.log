@@ -10,10 +10,7 @@ ___/   /   /___/   /   /___/       MP—Parallel Edition
                                    800-782-8272        https://www.stata.com
                                    979-696-4600        service@stata.com
 
-Stata license: Single-user 4-core  perpetual
-Serial number: 501906220380
-  Licensed to: Chanh Bao Lam
-               Kansas State University
+[License details removed for public distribution.]
 
 Notes:
       1. Stata is running in batch mode.
@@ -22,7 +19,7 @@ Notes:
       4. Maximum number of variables is set to 5,000 but can be increased;
           see help set_maxvar.
 
-. do /private/tmp/teachingdemo-extra.do 
+. do [temporary directory]/teachingdemo-extra.do
 
 . clear all
 
@@ -31,19 +28,16 @@ Notes:
 . capture log close
 
 . log using "validation/stata-rcads.log", text replace
-(file /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.log
+(file validation/stata-rcads.log
     not found)
 -------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.
-> log
+       log:  validation/stata-rcads.log
   log type:  text
  opened on:   9 Oct 2026, 23:51:18
 
 . * 1. Full precision course data, read only.
-. import excel "/Users/cblam/Library/CloudStorage/OneDrive-KansasStateUniversit
-> y/COE Teaching/EDCI 913 Inquiry I/3-Fall 2026/Stata/Groupwork data/Group work
->  3 - p7 RCADS.xlsx", cellrange(B2:C137) firstrow clear
+. import excel "[local workbook path omitted]", cellrange(B2:C137) firstrow clear
 (2 vars, 135 obs)
 
 . ttest September == December
@@ -122,8 +116,7 @@ scalars:
 
 . log close
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.
-> log
+       log:  validation/stata-rcads.log
   log type:  text
  closed on:   9 Oct 2026, 23:51:18
 -------------------------------------------------------------------------------

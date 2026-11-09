@@ -5,6 +5,8 @@
   const $=id=>document.getElementById(id), fuel=$("observations").value;
   const fmt=TTestView.number;
   let showCI=false;
+  let assistantContext={page:"two-sample",valid:false};
+  globalThis.readTeachingDemo=()=>assistantContext;
   function tag(name,attrs,content="") {
     return "<"+name+" "+Object.entries(attrs).map(([key,value])=>key+'="'+value+'"').join(" ")+">"+content+"</"+name+">";
   }
@@ -21,6 +23,7 @@
     const critical=Stats.quantile(1-alpha/(tail==="two"?2:1),"t",result.df);
     const bounds=TTestView.interval(result.t,1,"t",result.df,tail,alpha);
     const domain=Math.max(4.4,critical*1.3,Math.abs(result.t)*1.18,Math.max(...bounds.filter(Number.isFinite).map(Math.abs))*1.12),base=270;
+    if (!Number.isFinite(domain*2) || !Number.isFinite(domain*result.se)) throw new Error("The plot exceeds the numerical range. Rescale the observations.");
     $("toggle-ci").textContent=showCI?"Hide":"Show";
     $("toggle-ci").setAttribute("aria-pressed",String(showCI));
     $("toggle-ci").setAttribute("aria-label",(showCI?"Hide":"Show")+" confidence interval on the plot");
@@ -62,7 +65,7 @@
     if(result.kind==="paired") {
       const differences=pairs.filter(pair=>pair[0]!==null && pair[1]!==null).map(pair=>pair[0]-pair[1]);
       let low=differences.reduce((a,b)=>Math.min(a,b),0),high=differences.reduce((a,b)=>Math.max(a,b),0);
-      const pad=Math.max(1,(high-low)*.15);low-=pad;high+=pad;
+      const pad=Math.max(Number.MIN_VALUE,(high-low)*.15);low-=pad;high+=pad;
       const px=x=>70+(x-low)/(high-low)*860;
       svg=tag("title",{},"Individual paired differences, sample 1 minus sample 2")+line(px(0),30,px(0),200,"#8b98ab","4 4")+line(70,200,930,200,"#8b98ab");
       // Stack repeated differences; show up to 1000 marks to keep the chart responsive.
@@ -74,7 +77,7 @@
         const stacks=new Map();
         differences.slice(0,1000).forEach(value=>{const key=Math.round(px(value)/9),count=stacks.get(key)||0;stacks.set(key,count+1);svg+=tag("circle",{cx:px(value),cy:190-count*155/maxCount,r:2.5,fill:"#512888"});});
       }
-      for(let i=0;i<=4;i++){const value=low+(high-low)*i/4;svg+=text(px(value),225,Number(value.toFixed(2)));}
+      for(let i=0;i<=4;i++){const value=low+(high-low)*i/4;svg+=text(px(value),225,Number(value.toPrecision(4)));}
       svg+=text(500,263,"Difference (Sample 1 - Sample 2)");
       $("data-chart-title").textContent="Within-pair differences";
       $("data-chart-note").textContent=(result.omitted?result.omitted+" incomplete pair(s) excluded. ":"")+(differences.length>1000?"First 1,000 differences shown; all complete pairs included in the test.":"");
@@ -92,7 +95,7 @@
         } else svg+=line(px(row.mean),55,px(row.mean),200,color,j?"7 4":"");
         svg+=line(px(row.mean-row.sd),240+j*22,px(row.mean+row.sd),240+j*22,color);
       });
-      for(let i=0;i<=4;i++){const value=low+range*i/4;svg+=text(px(value),223,Number(value.toFixed(2)));}
+      for(let i=0;i<=4;i++){const value=low+range*i/4;svg+=text(px(value),223,Number(value.toPrecision(4)));}
       svg+=text(70,25,"Sample 1: SD = "+fmt(rows[0].sd)+" (solid)","start")+text(930,25,"Sample 2: SD = "+fmt(rows[1].sd)+" (dashed)","end");
       $("data-chart-title").textContent="Comparing variability";
       $("data-chart-note").textContent="Illustrative normal curves, not observed distributions. Bars: mean ± 1 SD.";
@@ -121,7 +124,16 @@
       $("two-subtitle").textContent="H₀: difference = 0 · "+(design==="paired"?"Pairs = "+result.rows[0].n:"n₁ = "+first.n+" · n₂ = "+second.n)+" · DF = "+fmt(result.df);
 
       $("input-error").hidden=true;$("two-output").hidden=false;
+      // Expose summaries only, never the pasted observations, to the optional assistant.
+      assistantContext={page:"two-sample",valid:true,test:design==="paired"?"Dependent (paired) t-test":"Independent (unpaired) t-test",
+        method:design==="paired"?"paired":method,scale:document.querySelector('input[name="scale"]:checked').value,tail,alpha,
+        nullValue:0,estimate:result.estimate,se:result.se,statistic:{symbol:"t",value:result.t},df:result.df,p:result.p[tail],
+        decision:result.p[tail]<alpha?"Reject H₀":"Fail to reject H₀",confidenceLevel:level,
+        confidenceInterval:TTestView.interval(result.estimate,result.se,"t",result.df,tail,alpha),
+        samples:result.rows.slice(0,2).map(({n,mean,sd})=>({n,mean,sd})),
+        differenceSD:design==="paired"?result.rows[2].sd:null,omittedPairs:design==="paired"?result.omitted:null};
     } catch(error) {
+      assistantContext={page:"two-sample",valid:false};
       $("input-error").textContent=error.message;$("input-error").hidden=false;$("two-output").hidden=true;
     }
   }

@@ -1,14 +1,11 @@
 -------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.
-> log
+       log:  validation/stata-rcads.log
   log type:  text
  opened on:   9 Oct 2026, 23:51:18
 
 . * 1. Full precision course data, read only.
-. import excel "/Users/cblam/Library/CloudStorage/OneDrive-KansasStateUniversit
-> y/COE Teaching/EDCI 913 Inquiry I/3-Fall 2026/Stata/Groupwork data/Group work
->  3 - p7 RCADS.xlsx", cellrange(B2:C137) firstrow clear
+. import excel "[local workbook path omitted]", cellrange(B2:C137) firstrow clear
 (2 vars, 135 obs)
 
 . ttest September == December
@@ -87,8 +84,7 @@ scalars:
 
 . log close
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-rcads.
-> log
+       log:  validation/stata-rcads.log
   log type:  text
  closed on:   9 Oct 2026, 23:51:18
 -------------------------------------------------------------------------------

@@ -1,0 +1,96 @@
+Teaching demo prepublication audit
+Date: 2026-11-06 (America/Chicago)
+
+1. Assessment
+The statistical calculators pass the completed code and automated checks.
+Covered: one-sample z, one-sample t, independent t (pooled, Satterthwaite,
+and Stata's Welch method), paired t, Pearson correlation, and simple linear
+regression. The assistant is excluded from this release while its replacement
+is pending. It is hidden on every page; its prototype files remain.
+
+No browser, local preview server, or live deployment was used. Final rendered
+layout, native input/spinner behavior, and pointer dragging remain for the
+instructor's browser review before publication. Nothing was committed or pushed.
+GitHub Pages account settings and the live deployment were not inspected.
+
+2. Confirmed issues corrected
+- Invalid one-sample inputs previously left old results and decisions visible.
+  Results now hide with a specific input message and return after correction.
+  Multiple invalid fields, changing controls during an error, Reset, finite
+  numerical overflow, and intentional infinite slider endpoints were checked.
+- Unequal-variance degrees of freedom squared unnormalized variance contributions,
+  causing overflow or underflow for extreme units. Normalized contributions now
+  preserve the same Stata formulas and remain stable at unit factors 1e-100 and
+  1e100. Nonfinite calculations and confidence intervals are rejected explicitly.
+- Small paired differences used a minimum one-unit plot margin, and small
+  variability-axis values rounded to zero. Relative padding and significant-digit
+  labels now retain visible spread and meaningful units.
+- The abandoned chatbot still offered a model download and referenced its deleted
+  worker. Its includes are disconnected from the three older pages. The new
+  correlation page already excluded it. Obsolete operating/privacy claims were
+  removed from the active README; archived prototype files were retained.
+- Added the normality and independence conditions to the collapsed one-/two-sample
+  methodology sections. The correlation Fisher interval remains explicitly
+  approximate; it is not replaced by an invalid symmetric t interval for rho.
+
+3. Numerical and interaction evidence
+All test commands below completed successfully after the fixes.
+There are 6,009 numerical comparisons across the four reference/audit suites,
+in addition to the basic probability checks. Comparisons use saved output from
+Stata 19 and independent SciPy references; Stata was not rerun in this audit.
+The unequal-variance fix preserves the existing Stata reference agreement.
+The interaction suites cover 288 test/control combinations and 108 descriptive
+table combinations, plus additional edge-case checks. These use DOM harnesses.
+
+test-math.cjs
+All numerical checks passed.
+
+test-ttests.cjs
+11 Stata reference cases passed; 285 numerical comparisons within relative/absolute tolerance 1e-9.
+
+test-audit.cjs
+3017 audit numerical comparisons passed; 200 new Stata cases. Maximum normalized error 2.2698801801811347e-11.
+
+test-ui-audit.cjs
+108 descriptive-table combinations passed, including unequal sample sizes, incomplete pairs, zero SD, invalid input, and reset.
+144 UI setting combinations passed, plus precision, invalid inputs, slider endpoints and reset checks (DOM harness; no browser).
+Assistant snapshots passed for all four tests, scale changes, missing data and invalid inputs.
+
+test-correlation.cjs
+2635 numerical comparisons passed against SciPy 1.13.1; 32 datasets, missingness, transformations and invalid-input checks passed.
+72 comparisons passed against 6 actual Stata 19 cases.
+
+test-correlation-ui.cjs
+144 UI combinations passed, plus CI geometry, missingness, invalid inputs, perfect fits, N=3, reset, scatterplot limits, links and KaTeX equations (no browser).
+
+test-chat.cjs
+Archived prompt checks passed; the inactive assistant is disconnected from all four pages. Worker/model tests skipped because the engine was removed.
+
+test-release.cjs
+Release checks passed: 4 pages, 8 active scripts, 94 local asset references, 23 KaTeX equations, navigation, font files, and inactive assistant.
+
+4. Files, security, and references
+All four HTML pages and their local dependencies passed exact-case filename
+checks for GitHub Pages: eight active scripts, 94 local asset references, and
+23 KaTeX equations. Math fonts, home navigation, and the bundled MIT license
+are present. No build or model download is required for the calculators.
+The new test-release.cjs repeats the local publication checks.
+
+No known API-key/private-key patterns were detected in current project files.
+The checked validation logs contained no matching license numbers or absolute
+user-home paths. This is a current-file pattern scan, not a forensic audit of Git
+history or a guarantee against arbitrary secrets.
+Active first-party application scripts contain no detected network/worker calls.
+KaTeX's parser.fetch() was inspected: it reads a math token, not a network request.
+No live browser network capture or actual screen-reader test was performed.
+
+Reference links were reviewed. The KaTeX release, Fisher archive, and SciPy
+documentation resolve through the reference tools. The DOI links redirect to
+JSTOR, whose content the tool could not inspect. The complete Stata manual is
+larger than the tool's document limit. These limits do not affect local assets.
+
+5. Publication boundary
+Publish the calculators after the instructor's visual review. The assistant
+requires a new engine, updated privacy wording, and separate answer evaluation
+before being made available. No API key, backend, or billing was configured.
+

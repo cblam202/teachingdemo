@@ -23,7 +23,7 @@ function page(file,scripts){
  const context=vm.createContext({document});for(const script of scripts)vm.runInContext(fs.readFileSync(script,'utf8'),context);
  const select=(name,value)=>{for(const r of radios)if(r.name===name)r.checked=r.value===value;const el=query(`input[name="${name}"]:checked`);el.fire(file==='one-sample.html'?'change':'input');};
  const input=(id,value)=>{get(id).value=String(value);get(id).fire('input');};
- return {get,select,input};
+ return {get,select,input,read:()=>JSON.parse(JSON.stringify(context.readTeachingDemo()))};
 }
 function geometry(svg){return svg.replace(/<g class="ci-overlay"[\s\S]*<\/g>/,'');}
 // 2. One-sample input precision, all directions/alphas/scales, toggles and reset.
@@ -36,6 +36,16 @@ one.select('scale','original');assert(one.get('stat-value').innerHTML.startsWith
 one.select('scale','standard');assert.equal(one.get('result-se').textContent,'1.000');
 one.input('n',2.5);assert(!one.get('n').checkValidity());one.get('reset').fire('click');
 one.input('sd',0);assert(!one.get('sd').checkValidity());one.get('reset').fire('click');assert(one.get('sd').checkValidity());
+// Invalid inputs cannot leave the last valid decision visible, including after another control changes.
+for(const [id,value] of [['n',2.5],['n',10002],['mean',''],['sd',0],['sd',-1],['observed',''],['sd',1e-320],['observed',1.79e308]]) {
+ one.input(id,value);assert(one.get('one-output').hidden,id+' = '+value+' must hide stale results');assert(!one.get('input-error').hidden);assert.equal(one.read().valid,false);
+ one.select('scale','original');assert(one.get('one-output').hidden);
+ one.select('distribution','t');assert(one.get('method-z').hidden);assert(!one.get('method-t').hidden);assert(one.get('one-output').hidden);
+ one.get('reset').fire('click');assert(!one.get('one-output').hidden);assert(one.get('input-error').hidden);assert.equal(one.read().valid,true);
+}
+one.input('n',1);one.input('observed','');one.input('n',25);assert(one.get('one-output').hidden);
+one.input('observed',108.123456789);assert(!one.get('one-output').hidden);assert.equal(one.read().estimate,108.123456789);
+one.get('reset').fire('click');
 let combinations=0;
 for(const kind of ['z','t'])for(const tail of ['two','left','right'])for(const alpha of ['0.10','0.05','0.01'])for(const scale of ['standard','original']){
  one.select('distribution',kind);one.select('tail',tail);one.select('alpha',alpha);one.select('scale',scale);
@@ -100,3 +110,35 @@ assert(!two.get('two-output').hidden);assert.equal(tableRows()[0][1],'12');asser
 const twoHtml=fs.readFileSync('two-sample.html','utf8');assert(twoHtml.indexOf('id="descriptive-results"')<twoHtml.indexOf('id="data-chart-title"'));
 console.log('108 descriptive-table combinations passed, including unequal sample sizes, incomplete pairs, zero SD, invalid input, and reset.');
 console.log(`${combinations} UI setting combinations passed, plus precision, invalid inputs, slider endpoints and reset checks (DOM harness; no browser).`);
+// 6. Assistant snapshots track the exact calculation, not rounded output or pasted raw data.
+one.get('reset').fire('click');
+assert.equal(one.read().test,'One-sample z-test');assert.equal(one.read().se,3);assert.equal(one.read().estimate,107);
+const initial=one.read();one.select('scale','original');assert.equal(one.read().p,initial.p);assert.equal(one.read().se,3);
+one.select('distribution','t');assert.equal(one.read().df,24);assert.equal(one.read().p,Stats.pValue(7/3,'two','t',24));
+one.select('tail','right');assert.equal(one.read().decision,'Reject H₀');
+one.input('n',2.5);assert.equal(one.read().valid,false);one.get('reset').fire('click');
+one.input('observed','');assert.equal(one.read().valid,false);one.get('reset').fire('click');
+one.input('p-slider',0);assert.equal(one.read().valid,false);
+two.input('design','paired');two.input('observations',partial);
+assert.equal(two.read().test,'Dependent (paired) t-test');assert.equal(two.read().samples[0].n,3);
+assert.equal(two.read().omittedPairs,3);assert(Math.abs(two.read().differenceSD-Math.sqrt(7/3))<1e-14);
+assert(!('observations' in two.read()));assert(!('pairs' in two.read()));
+two.input('design','independent');two.input('method','welch');
+assert.equal(two.read().method,'welch');assert.equal(two.read().samples[0].n,5);assert.equal(two.read().differenceSD,null);
+two.input('observations','bad data');assert.equal(two.read().valid,false);
+// 7. Small measurement units retain meaningful chart labels and visible paired spread.
+for(const design of ['independent','paired']) {
+ two.get('reset-two').fire('click');two.input('design',design);
+ two.input('observations','20 24\n23 25\n21 21\n25 22');
+ const normal=two.get('data-plot').innerHTML;
+ two.input('observations',[[20,24],[23,25],[21,21],[25,22]].map(pair=>pair.map(value=>value*1e-100).join(' ')).join('\n'));
+ assert(two.get('input-error').hidden);const small=two.get('data-plot').innerHTML;
+ assert(!/(NaN|Infinity)/.test(small));
+ const ticks=[...small.matchAll(/<text x="[^"]+" y="22[35]"[^>]*>([^<]+)<\/text>/g)].map(match=>Number(match[1]));
+ assert.equal(ticks.length,5);assert(new Set(ticks).size>1,'Small-unit chart labels must not all round to zero');
+ if(design==='paired') {
+  const positions=svg=>[...svg.matchAll(/<circle cx="([^"]+)"/g)].map(match=>Number(match[1]));
+  positions(small).forEach((x,i)=>assert(Math.abs(x-positions(normal)[i])<1e-8,'Paired point positions should be unit invariant'));
+ }
+}
+console.log('Assistant snapshots passed for all four tests, scale changes, missing data and invalid inputs.');

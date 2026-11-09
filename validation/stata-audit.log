@@ -1,7 +1,6 @@
 -------------------------------------------------------------------------------
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-audit.
-> log
+       log:  validation/stata-audit.log
   log type:  text
  opened on:   9 Oct 2026, 23:51:54
 
@@ -1773,8 +1772,7 @@
 
 . log close
       name:  <unnamed>
-       log:  /Users/cblam/Documents/GitHub/teachingdemo/validation/stata-audit.
-> log
+       log:  validation/stata-audit.log
   log type:  text
  closed on:   9 Oct 2026, 23:51:54
 -------------------------------------------------------------------------------
